@@ -25,7 +25,7 @@ public class SwearwordRestService {
 
 	private final RestApiUtil restApiUtil;
 
-	@Value("${app.apiUrl.common}")
+	@Value("http://localhost:8082")
 	private String commonApiUrl;
 
 	private static final String BANWORD_API_URL = "/api/common/v1/system/getBadwordList";

@@ -1,0 +1,32 @@
+{
+  "groups": [
+    {
+      "name": "dateformat",
+      "type": "kr.co.tumble.common.messageconverter.YamlDateFormatRead",
+      "sourceType": "kr.co.tumble.common.messageconverter.YamlDateFormatRead"
+    }
+  ],
+  "properties": [
+    {
+      "name": "dateformat.local-date",
+      "type": "java.util.Map<java.lang.String,java.lang.Object>",
+      "sourceType": "kr.co.tumble.common.messageconverter.YamlDateFormatRead"
+    },
+    {
+      "name": "dateformat.local-date-time",
+      "type": "java.util.Map<java.lang.String,java.lang.Object>",
+      "sourceType": "kr.co.tumble.common.messageconverter.YamlDateFormatRead"
+    },
+    {
+      "name": "dateformat.local-time",
+      "type": "java.util.Map<java.lang.String,java.lang.Object>",
+      "sourceType": "kr.co.tumble.common.messageconverter.YamlDateFormatRead"
+    },
+    {
+      "name": "dateformat.patterns",
+      "type": "java.util.List<java.lang.String>",
+      "sourceType": "kr.co.tumble.common.messageconverter.YamlDateFormatRead"
+    }
+  ],
+  "hints": []
+}

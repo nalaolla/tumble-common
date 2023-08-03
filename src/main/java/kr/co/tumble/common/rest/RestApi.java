@@ -1,25 +1,39 @@
 package kr.co.tumble.common.rest;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.channel.ChannelOption;
-import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+import kr.co.tumble.common.constant.TumbleConstants;
 import kr.co.tumble.common.context.ApplicationContextWrapper;
 import kr.co.tumble.common.context.ConfigProperties;
 import kr.co.tumble.common.context.CookieContextHolder;
 import kr.co.tumble.common.context.RequestContextUtil;
 import kr.co.tumble.common.messageconverter.CustomObjectMapper;
+import kr.co.tumble.common.rest.*;
 import kr.co.tumble.common.token.MemberTokenService;
 import kr.co.tumble.common.token.ServiceTokenService;
 import kr.co.tumble.common.token.TokenRequest;
 import kr.co.tumble.common.token.UserDetail;
 import kr.co.tumble.common.util.JsonUtils;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.json.Jackson2JsonDecoder;
@@ -35,12 +49,16 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
-import reactor.netty.http.client.HttpClient;
 
-import java.net.URI;
-import java.nio.charset.Charset;
-import java.time.Duration;
-import java.util.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+
+import io.netty.channel.ChannelOption;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import reactor.netty.http.client.HttpClient;
 
 /**
  * WebClient 모듈
@@ -58,14 +76,14 @@ public abstract class RestApi {
 	private Map<String, Object> uriVariables;
 
 	private long latencyTimes = -1;
-	
+
 	private boolean enableTokenAuth = false;
 	private boolean useMemberToken = false;
 
 	public static RestApi client(String url) {
 		return client(url, true, false);
 	}
-	
+
 	public static RestApi client(String url, boolean enableTokenAuth) {
 		return client(url, enableTokenAuth, false);
 	}
@@ -73,8 +91,8 @@ public abstract class RestApi {
 	public static RestApi client(String url, boolean enableTokenAuth, boolean useMemberToken) {
 		RestApi restApi = new RestApi() {};
 		if (RestApi.serviceTokenService == null) {
-			RestApi.serviceTokenService = (ServiceTokenService) ApplicationContextWrapper.getBean("serviceTokenService");
-			RestApi.memberTokenService = (MemberTokenService)ApplicationContextWrapper.getBean("memberTokenService");
+			RestApi.serviceTokenService = (ServiceTokenService)ApplicationContextWrapper.getBean("serviceTokenService");
+			RestApi.memberTokenService = (MemberTokenService) ApplicationContextWrapper.getBean("memberTokenService");
 		}
 		restApi.uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(url);
 		restApi.enableTokenAuth = enableTokenAuth;
@@ -132,7 +150,7 @@ public abstract class RestApi {
 		setObjectAsQueryParam(request);
 		return execute(null, HttpMethod.GET, responseReference);
 	}
-	
+
 	public <T> RestResponse<T> get(Object request, ParameterizedTypeReference<T> responseReference, int responseTimeoutSeconds) {
 		setObjectAsQueryParam(request);
 		return execute(null, HttpMethod.GET, responseReference, responseTimeoutSeconds, connectionTimeoutSeconds);
@@ -146,11 +164,11 @@ public abstract class RestApi {
 	public <T> RestResponse<T> post(Object request, Class<T> type) {
 		return execute(request, HttpMethod.POST, type);
 	}
-	
+
 	public <T> RestResponse<T> post(Object request, ParameterizedTypeReference<T> responseReference) {
 		return execute(request, HttpMethod.POST, responseReference);
 	}
-	
+
 	public <T> RestResponse<T> post(Object request, ParameterizedTypeReference<T> responseReference, int responseTimeoutSeconds) {
 		return execute(request, HttpMethod.POST, responseReference, responseTimeoutSeconds, connectionTimeoutSeconds);
 	}
@@ -162,11 +180,11 @@ public abstract class RestApi {
 	public <T> RestResponse<T> put(Object request, Class<T> type) {
 		return execute(request, HttpMethod.PUT, type);
 	}
-	
+
 	public <T> RestResponse<T> put(Object request, ParameterizedTypeReference<T> responseReference) {
 		return execute(request, HttpMethod.PUT, responseReference);
 	}
-	
+
 	public <T> RestResponse<T> put(Object request, ParameterizedTypeReference<T> responseReference, int responseTimeoutSeconds) {
 		return execute(request, HttpMethod.PUT, responseReference, responseTimeoutSeconds, connectionTimeoutSeconds);
 	}
@@ -178,11 +196,11 @@ public abstract class RestApi {
 	public <T> RestResponse<T> patch(Object request, Class<T> type) {
 		return execute(request, HttpMethod.PATCH, type);
 	}
-	
+
 	public <T> RestResponse<T> patch(Object request, ParameterizedTypeReference<T> responseReference) {
 		return execute(request, HttpMethod.PATCH, responseReference);
 	}
-	
+
 	public <T> RestResponse<T> patch(Object request, ParameterizedTypeReference<T> responseReference, int responseTimeoutSeconds) {
 		return execute(request, HttpMethod.PATCH, responseReference, responseTimeoutSeconds, connectionTimeoutSeconds);
 	}
@@ -200,7 +218,7 @@ public abstract class RestApi {
 		setObjectAsQueryParam(request);
 		return execute(null, HttpMethod.DELETE, responseReference);
 	}
-	
+
 	public <T> RestResponse<T> delete(Object request, ParameterizedTypeReference<T> responseReference, int responseTimeoutSeconds) {
 		setObjectAsQueryParam(request);
 		return execute(null, HttpMethod.DELETE, responseReference, responseTimeoutSeconds, connectionTimeoutSeconds);
@@ -218,7 +236,7 @@ public abstract class RestApi {
 	public WebClient webClient(int responseTimeoutSeconds, int connectionTimeoutSeconds) {
 		return WebClientInstance.get(responseTimeoutSeconds, connectionTimeoutSeconds);
 	}
-	
+
 	private void configRequestHeader(HttpHeaders httpHeaders) {
 		configAuthorization(httpHeaders);
 		WebClientInstance.configRequestHeader(httpHeaders);
@@ -226,14 +244,14 @@ public abstract class RestApi {
 		String callAppName = "";
 		try {
 			HttpServletRequest request = RequestContextUtil.getHttpServletRequest();
-			callAppName = request.getHeader("Appname");
+			callAppName = request.getHeader(TumbleConstants.HEADER_RESTAPI_CALL_APP_NAME_KEY);
 		} catch (Exception ex) {
 			callAppName = "";
 		}
 		if (StringUtils.isBlank(callAppName)) {
-			callAppName = Optional.ofNullable(ConfigProperties.getInstance().getValue("spring.application.name")).orElse("");
+			callAppName = Optional.ofNullable(ConfigProperties.getInstance().getValue(TumbleConstants.SPRING_APP_NAME_KEY)).orElse("");
 		}
-		httpHeaders.add("Appname", callAppName);
+		httpHeaders.add(TumbleConstants.HEADER_RESTAPI_CALL_APP_NAME_KEY, callAppName);
 
 		Map<String, String> cookieMap = CookieContextHolder.getCookieMap().getMap();
 		if (cookieMap == null) {
@@ -245,12 +263,12 @@ public abstract class RestApi {
 		String mallNo = CookieContextHolder.getMallNo();
 		String chlNo = CookieContextHolder.getChlNo();
 		String sessNo = CookieContextHolder.getSessNo();
-		cookieMap.put("site_no", siteNo);
-		cookieMap.put("lang_cd", langCd);
-		cookieMap.put("data_lang_cd", dataLangCd);
-		cookieMap.put("mall_no", mallNo);
-		cookieMap.put("chl_no", chlNo);
-		cookieMap.put("sessNo", sessNo);
+		cookieMap.put(TumbleConstants.COOKIE_SITE_NO_KEY, siteNo);
+		cookieMap.put(TumbleConstants.COOKIE_LANG_CD_KEY, langCd);
+		cookieMap.put(TumbleConstants.COOKIE_DATA_LANG_CD_KEY, dataLangCd);
+		cookieMap.put(TumbleConstants.COOKIE_MALL_NO_KEY, mallNo);
+		cookieMap.put(TumbleConstants.COOKIE_CHL_NO_KEY, chlNo);
+		cookieMap.put(TumbleConstants.COOKIE_SESS_NO_KEY, sessNo);
 
 		List<String> cookieList = ConfigProperties.getInstance().getListValue("cookies");
 		StringBuilder stringBuilder = new StringBuilder();
@@ -262,9 +280,9 @@ public abstract class RestApi {
 		}
 		cookie = StringUtils.removeEnd(stringBuilder.toString(), " ");
 
-		httpHeaders.add("Cookie", cookie);
+		httpHeaders.add(TumbleConstants.HEADER_COOKIE_KEY, cookie);
 	}
-	
+
 	private void configAuthorization(HttpHeaders httpHeaders) {
 		if ( this.enableTokenAuth ) {
 			if (this.useMemberToken) {
@@ -353,7 +371,7 @@ public abstract class RestApi {
 			return new RestResponse<>(e);
 		}
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private <T> RestResponse<Response<T>> createErrorResponse(WebClientResponseException e) {
 		String message = null;
@@ -371,28 +389,48 @@ public abstract class RestApi {
 		} catch (JsonProcessingException e1) {
 			log.error("", e1);
 		}
-		
+
 		Response<T> response = new Response<>();
 		if (data == null) {
 			response.setCode("500");
 			response.setMessage("Unkonw error.");
+			response.setError(true);
 		} else {
-			response.setCode((String)data.get("code"));
-			response.setMessage((String)data.get("message"));
-			response.setError((Boolean) data.get("error"));
-			response.setIsProcess((Boolean) data.get("isProcess"));
+			if (ObjectUtils.isNotEmpty(data.get("code"))) {
+				response.setCode((String)data.get("code"));
+			}
+
+			if (ObjectUtils.isNotEmpty(data.get("message"))) {
+				response.setMessage((String)data.get("message"));
+			}
+
+			if (ObjectUtils.isNotEmpty(data.get("error"))) {
+				response.setError((Boolean) data.get("error"));
+			}
+
+			if (ObjectUtils.isNotEmpty(data.get("isProcess"))) {
+				response.setIsProcess((Boolean) data.get("isProcess"));
+			}
+
+			if (ObjectUtils.isNotEmpty(data.get("errors"))) {
+				response.setErrors((List<ValidationError>) data.get("errors"));
+			}
+
+			if (ObjectUtils.isNotEmpty(data.get("payload"))) {
+				response.setPayload((T) data.get("payload"));
+			}
 		}
-		
+
 		ResponseEntity<Response<T>> responseEntity = new ResponseEntity<>(response, e.getStatusCode());
 		RestResponse<Response<T>> restResponse =  new RestResponse<>(responseEntity, e);
 		return restResponse;
 	}
-	
+
 	private <T> void logging(URI url, HttpMethod method, HttpHeaders reqHeaders, Object reqBody, ResponseEntity<T> responseEntity, Exception e) {
 		if (log.isDebugEnabled()) {
 			if (Objects.isNull(e)) {
 				Object resBody = Optional.ofNullable(responseEntity.getBody()).orElse(null);
-				logging(url, method, reqHeaders, reqBody==null?null: JsonUtils.string(reqBody), responseEntity.getStatusCode().value(),
+				logging(url, method, reqHeaders, reqBody==null?null:JsonUtils.string(reqBody), responseEntity.getStatusCode().value(),
 						responseEntity.getStatusCode().toString(), responseEntity.getHeaders(),
 						resBody==null?null:JsonUtils.string(resBody), null);
 			} else if (e instanceof RestClientResponseException re) {
